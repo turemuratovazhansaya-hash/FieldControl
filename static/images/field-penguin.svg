@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" shape-rendering="crispEdges" role="img" aria-labelledby="title desc">
+  <title id="title">Пинго — талисман FieldControl</title>
+  <desc id="desc">Пиксельный пингвин в бирюзовом шарфе бежит по льду.</desc>
+  <circle cx="128" cy="128" r="112" fill="#5B8CFF" fill-opacity=".11"/>
+  <path d="M40 216h176v8H40zM64 232h128v4H64z" fill="#73d7d0" fill-opacity=".45"/>
+  <path d="M28 124h32v8H28zM40 144h24v8H40zM32 164h32v8H32z" fill="#8be7e4" fill-opacity=".75"/>
+  <!-- body silhouette -->
+  <path d="M80 64h16V48h64v16h16v32h16v80h-16v32H80v-16H64V96h16z" fill="#172844" stroke="#3a5278" stroke-width="4"/>
+  <!-- face patch -->
+  <path d="M96 64h64v16h16v32h-16v16H96v-16H80V80h16z" fill="#f1f6fa"/>
+  <path d="M96 64h64V48h-64z" fill="#101b2e"/>
+  <path d="M104 88h8v12h-8zM144 88h8v12h-8z" fill="#12203a"/>
+  <path d="M120 104h16v8h-8v8h-8v-8h-8v-8z" fill="#f2a445"/>
+  <!-- belly -->
+  <path d="M96 128h64v16h16v48h-16v16h-64v-16H80v-48h16z" fill="#f1f6fa"/>
+  <!-- scarf -->
+  <path d="M72 120h16v8h80v-8h16v24h-16v8H88v-8H72z" fill="#45c7af"/>
+  <path d="M152 144h24v8h-8v32h-16v-8h-8v-24h8z" fill="#38a994"/>
+  <path d="M64 136h16v40H64z" fill="#273c60"/>
+  <!-- running feet -->
+  <path d="M88 208h32v8h-8v8H80v-8h8zM144 208h24v8h8v8h-32z" fill="#f1a447"/>
+  <path d="M200 88h8v8h8v8h-8v8h-8v-8h-8v-8h8z" fill="#bff7f1"/>
+</svg>

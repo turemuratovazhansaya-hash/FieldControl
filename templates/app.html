@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FieldControl — контроль полевых команд</title>
+<link rel="icon" href="/static/images/field-penguin.svg" type="image/svg+xml">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Onest', 'system-ui', 'sans-serif'] },
+  colors: { bg: '#0D1420', panel: '#141E2F', raise: '#1A2639', line: '#26354D', txt: '#E7EDF6', mute: '#8EA0B8',
+            accent: '#5B8CFF', alert: '#F2635B', ok: '#3DBB8A', amber: '#E3A63C' }
+}}}
+</script>
+<style>
+  body { background: radial-gradient(ellipse at 12% 0%, rgba(66,110,190,.15), transparent 34%), radial-gradient(ellipse at 95% 18%, rgba(53,142,122,.10), transparent 30%), #0D1420; }
+  input, select { color-scheme: dark; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #5B8CFF; outline-offset: 2px; }
+  @keyframes scan { 0% { top: 8%; } 100% { top: 88%; } }
+  .scanline { animation: scan 1.1s ease-in-out infinite alternate; }
+  .msg { animation: pop .18s ease-out; }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .scanline, .msg { animation: none; } }
+  tbody tr:hover { background: #18243A; }
+  .card-hover { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; box-shadow: 0 16px 40px rgba(0,0,0,.12); }
+  .card-hover:hover { transform: translateY(-3px); border-color: #5B8CFF; box-shadow: 0 22px 48px rgba(0,0,0,.24); }
+  .dash-tab[aria-selected="true"] { background: linear-gradient(135deg,rgba(91,140,255,.22),rgba(91,140,255,.08)); color:#dce7ff; border-color:rgba(91,140,255,.45); box-shadow: inset 0 1px rgba(255,255,255,.06); }
+  .agent-tab[aria-selected="true"] { background: linear-gradient(135deg,rgba(91,140,255,.24),rgba(91,140,255,.08)); color:#dce7ff; border-color:rgba(91,140,255,.45); }
+  .auth-showcase { isolation: isolate; background: radial-gradient(ellipse at 80% 45%,rgba(91,140,255,.2),transparent 50%),linear-gradient(145deg,rgba(20,30,47,.98),rgba(11,20,34,.96)); }
+  .auth-showcase::after { content:""; position:absolute; inset:-30% auto -30% -65%; width:38%; transform:rotate(18deg); background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent); pointer-events:none; animation: sheen 9s ease-in-out infinite; }
+  @keyframes sheen { 0%,62%,100% { left:-65%; } 78% { left:135%; } }
+  @media (prefers-reduced-motion: reduce) { .auth-showcase::after { animation:none; } }
+</style>
+</head>
+<body class="font-sans text-txt min-h-screen">
+
+<!-- ===================== ВХОД / РЕГИСТРАЦИЯ ===================== -->
+<section id="auth" class="min-h-screen grid lg:grid-cols-2">
+  <div class="hidden lg:flex flex-col justify-between p-12 bg-panel border-r border-line relative overflow-hidden">
+    <!-- Decorative background elements -->
+    <div class="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+    <div class="absolute bottom-0 left-0 w-64 h-64 bg-ok/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+    
+    <div class="relative z-10">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center">
+          <img src="/static/images/field-penguin.svg" alt="" class="h-9 w-9 object-contain">
+        </div>
+        <span class="text-xl font-bold">FieldControl</span>
+      </div>
+    </div>
+
+    <div class="relative z-10 max-w-xl">
+      <p class="mb-3 text-xs font-bold uppercase tracking-[.22em] text-accent">Платформа полевого контроля</p>
+      <h1 class="mb-5 text-4xl font-extrabold leading-tight sm:text-5xl">Каждая точка под контролем. Каждый визит подтверждён.</h1>
+      <p class="max-w-lg text-mute leading-relaxed">Платформа фиксирует визиты по GPS, проверяет морозильники по QR, анализирует выкладку по фото и сразу сообщает руководителю об отклонениях.</p>
+      <div class="mt-5 max-w-lg rounded-2xl border border-accent/25 bg-accent/5 px-4 py-3">
+        <p class="text-xs font-bold uppercase tracking-wider text-accent">В планах</p>
+        <p class="mt-1 text-sm text-txt">Интеграция с собственной системой предотвращения кассовых разрывов.</p>
+      </div>
+      <div class="auth-showcase relative mt-8 overflow-hidden rounded-3xl border border-white/10 shadow-2xl shadow-black/30">
+        <img src="/static/images/field-penguin.svg" alt="Пинго — офлайн-маскот FieldControl" class="pointer-events-none absolute bottom-0 right-0 h-full w-1/2 object-contain opacity-90 drop-shadow-2xl">
+        <div class="absolute inset-0 bg-gradient-to-r from-bg via-bg/85 to-bg/20"></div>
+        <div class="relative p-5 sm:p-6">
+          <div class="mb-6 flex items-center justify-between"><div><p class="text-xs uppercase tracking-widest text-mute">FieldControl / live</p><p class="mt-1 font-bold">Сводка команды</p></div><span class="flex items-center gap-2 rounded-full border border-ok/30 bg-ok/10 px-3 py-1 text-xs font-semibold text-ok"><i class="h-2 w-2 animate-pulse rounded-full bg-ok"></i>В сети</span></div>
+          <div class="grid grid-cols-3 gap-2 sm:gap-3"><div class="rounded-2xl border border-white/10 bg-panel/75 p-3"><p class="text-xl font-extrabold">20</p><p class="mt-1 text-[11px] text-mute">представителей</p></div><div class="rounded-2xl border border-white/10 bg-panel/75 p-3"><p class="text-xl font-extrabold">500</p><p class="mt-1 text-[11px] text-mute">торговых точек</p></div><div class="rounded-2xl border border-white/10 bg-panel/75 p-3"><p class="text-xl font-extrabold text-ok">GPS</p><p class="mt-1 text-[11px] text-mute">контроль визитов</p></div></div>
+          <div class="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-panel/75 p-3"><div class="flex -space-x-2"><span class="grid h-8 w-8 place-items-center rounded-full border-2 border-panel bg-accent text-xs font-bold text-white">ИА</span><span class="grid h-8 w-8 place-items-center rounded-full border-2 border-panel bg-ok text-xs font-bold text-white">ПС</span><span class="grid h-8 w-8 place-items-center rounded-full border-2 border-panel bg-amber text-xs font-bold text-white">КЕ</span></div><p class="text-xs text-mute">Визиты, оборудование и фотоотчёты<br><b class="text-txt">собраны в одном рабочем пространстве</b></p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="relative z-10 flex items-center gap-6 text-xs text-mute border-t border-line pt-6">
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span>GPS-чекины</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-2 0a10 10 0 11-20 0 10 10 0 0120 0z"/></svg>
+        <span>QR-проверка</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.674M12 3v1m6.364 1.636l-.707.707M6.343 17.657l-.707-.707m12.728 0l-.707.707M6.343 6.343l-.707-.707M12 21a9 9 0 100-18 9 9 0 000 18z"/></svg>
+        <span>ИИ-аналитика</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-center p-6 lg:p-12">
+    <div class="w-full max-w-md">
+      <h2 class="text-2xl font-bold mb-2" id="authTitle">Вход в систему</h2>
+      <p class="text-mute text-sm mb-6">Выберите роль и войдите или зарегистрируйтесь</p>
+
+      <!-- Роль -->
+      <div class="grid grid-cols-3 gap-2 mb-6" role="group" aria-label="Роль">
+        <button type="button" data-role="agent" class="roleBtn text-left rounded-xl border p-4 transition card-hover">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
+              <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7m-2 0a2 2 0 114 0 2 2 0 01-4 0zM5 7a2 2 0 114 0 2 2 0 01-4 0zm12 10H7a2 2 0 01-2-2V9a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2z"/></svg>
+            </div>
+            <span class="font-semibold text-sm">Агент</span>
+          </div>
+          <span class="block text-xs text-mute">Визиты, отчёты, ИИ-чат</span>
+        </button>
+        <button type="button" data-role="manager" class="roleBtn text-left rounded-xl border p-4 transition card-hover">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-8 h-8 rounded-lg bg-amber/20 flex items-center justify-center">
+              <svg class="w-4 h-4 text-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V5l12-3v14M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg>
+            </div>
+            <span class="font-semibold text-sm">Руководитель</span>
+          </div>
+          <span class="block text-xs text-mute">Команда и инциденты</span>
+        </button>
+        <button type="button" data-role="owner" class="roleBtn text-left rounded-xl border p-4 transition card-hover">
+          <div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 rounded-lg bg-ok/20 flex items-center justify-center text-ok font-bold">₸</div><span class="font-semibold text-sm">Владелец</span></div>
+          <span class="block text-xs text-mute">Бизнес и KPI</span>
+        </button>
+      </div>
+
+      <!-- Вход / Регистрация -->
+      <div class="flex gap-6 mb-6 border-b border-line text-sm font-semibold">
+        <button type="button" data-mode="login" class="modeBtn pb-3 -mb-px border-b-2">Вход</button>
+        <button type="button" data-mode="register" class="modeBtn pb-3 -mb-px border-b-2">Регистрация</button>
+      </div>
+
+      <form id="authForm" class="space-y-4" novalidate>
+        <div id="nameRow" class="hidden transition-all duration-300">
+          <label class="block text-sm text-mute mb-1.5" for="fName">Имя и фамилия</label>
+          <input id="fName" class="w-full rounded-xl bg-panel border border-line px-4 py-3 focus:border-accent transition" autocomplete="name">
+        </div>
+        <div>
+          <label class="block text-sm text-mute mb-1.5" for="fEmail">Эл. почта</label>
+          <input id="fEmail" type="email" class="w-full rounded-xl bg-panel border border-line px-4 py-3 focus:border-accent transition" autocomplete="email">
+        </div>
+        <div>
+          <label class="block text-sm text-mute mb-1.5" for="fPass">Пароль</label>
+          <input id="fPass" type="password" class="w-full rounded-xl bg-panel border border-line px-4 py-3 focus:border-accent transition" autocomplete="current-password">
+        </div>
+        <p id="authError" class="hidden text-sm text-alert" role="alert"></p>
+        <button id="authSubmit" class="w-full rounded-xl bg-accent text-bg font-bold py-3.5 hover:brightness-110 transition shadow-lg shadow-accent/20">Войти</button>
+      </form>
+
+      <div class="mt-6 pt-5 border-t border-line">
+        <p class="text-sm text-mute mb-3">Демо-аккаунты для теста (пароль: 1234)</p>
+        <div id="demoList" class="space-y-2"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ПРИЛОЖЕНИЕ ===================== -->
+<section id="app" class="hidden min-h-screen">
+  <header class="sticky top-0 z-30 bg-panel/95 backdrop-blur border-b border-line">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
+          <img src="/static/images/field-penguin.svg" alt="" class="h-7 w-7 object-contain">
+        </div>
+        <span class="font-bold text-lg shrink-0">FieldControl</span>
+        <span id="roleBadge" class="hidden sm:inline rounded-full bg-accent/15 text-accent text-sm font-semibold px-3 py-1"></span>
+      </div>
+      <div class="flex items-center gap-3 min-w-0">
+        <span id="userAvatar" class="hidden sm:grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-gradient-to-br from-accent to-ok text-xs font-extrabold text-white shadow-lg"></span>
+        <span id="userName" class="text-sm text-mute truncate"></span>
+        <span id="dbStatus" title="Состояние базы данных" class="hidden sm:inline-flex items-center gap-2 rounded-full border border-line bg-bg/60 px-3 py-1.5 text-xs text-mute"><i class="w-2 h-2 rounded-full bg-amber"></i><span>База: проверка</span></span>
+        <span class="hidden sm:flex h-10 items-center gap-2 rounded-xl border border-ok/25 bg-ok/5 px-2.5 text-sm font-semibold text-ok"><img src="/static/images/field-penguin.svg" alt="" class="h-7 w-7"><span class="hidden md:inline">Пинго · талисман FieldControl</span></span>
+        <button id="switchView" class="hidden rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-raise whitespace-nowrap">Вид агента</button>
+        <button id="logout" class="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-raise">Выйти</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ---------- Кабинет руководителя ---------- -->
+  <main id="view-manager" class="hidden max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 id="managerTitle" class="text-2xl sm:text-3xl font-bold tracking-tight">Центр управления</h1>
+        <p class="text-mute text-sm mt-1" id="todayM"></p>
+      </div>
+      <button id="notifyAll" class="rounded-xl bg-accent text-bg font-semibold px-4 py-2.5 text-sm hover:brightness-110 transition shadow-lg shadow-accent/20 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 5.165 6 6.855 6 8.5v5.159A2.032 2.032 0 014.405 13.5L3 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        Уведомить регионального менеджера
+      </button>
+    </div>
+
+    <nav class="flex gap-2 overflow-x-auto rounded-2xl border border-line/80 bg-panel/75 p-2 shadow-xl backdrop-blur" aria-label="Разделы кабинета">
+      <button class="dash-tab rounded-xl border border-transparent px-4 py-2.5 text-sm font-semibold text-mute transition whitespace-nowrap" data-dashboard-tab="overview" aria-selected="true">Обзор</button>
+      <button class="dash-tab rounded-xl border border-transparent px-4 py-2.5 text-sm font-semibold text-mute transition whitespace-nowrap" data-dashboard-tab="analytics" aria-selected="false">Аналитика</button>
+      <button class="dash-tab rounded-xl border border-transparent px-4 py-2.5 text-sm font-semibold text-mute transition whitespace-nowrap" data-dashboard-tab="incidents" aria-selected="false">Инциденты</button>
+      <button class="dash-tab rounded-xl border border-transparent px-4 py-2.5 text-sm font-semibold text-mute transition whitespace-nowrap" data-dashboard-tab="activity" aria-selected="false">Журнал операций</button>
+      <button class="dash-tab rounded-xl border border-transparent px-4 py-2.5 text-sm font-semibold text-mute transition whitespace-nowrap" data-dashboard-tab="tasks" aria-selected="false">Календарь задач</button>
+      <button id="adminTab" class="dash-tab hidden rounded-xl border border-transparent px-4 py-2.5 text-sm font-semibold text-mute transition whitespace-nowrap" data-dashboard-tab="admin" aria-selected="false">Администрирование</button>
+    </nav>
+
+    <!-- Карточки с метриками -->
+    <section data-dashboard-panel="overview" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="rounded-2xl border border-alert/40 bg-gradient-to-br from-alert/15 to-panel p-6 min-h-[180px] flex flex-col justify-between card-hover">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-alert/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-alert" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+          <p class="text-alert font-medium">Пропущенные точки</p>
+        </div>
+        <div>
+          <p id="mMissed" class="text-7xl font-extrabold leading-none">5</p>
+          <p class="mt-3 text-mute">запланированных визитов без GPS-отметки за неделю</p>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-line bg-gradient-to-br from-panel to-raise/80 p-6 flex flex-col justify-between card-hover">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-amber/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C8.5 20.496 7.996 21 7.375 21h-2.25A1.125 1.125 0 014 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+          </div>
+          <p class="text-mute font-medium">Падение продаж</p>
+        </div>
+        <div>
+          <p id="mDrop" class="text-6xl font-extrabold leading-none text-alert">−30%</p>
+          <p id="mDropContext" class="mt-3 text-mute">Сопоставимая неделя прошлого периода · демо-данные</p>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-line bg-gradient-to-br from-panel to-raise/80 p-6 flex flex-col justify-between card-hover">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0 4c-1.657 0-3-.895-3-2s1.343-2 3-2m0-8a3 3 0 110 6 3 3 0 010-6zm0 0a3 3 0 100 6 3 3 0 000-6z"/></svg>
+          </div>
+          <p class="text-mute font-medium">Бюджет проекта</p>
+        </div>
+        <div>
+          <p class="text-3xl font-extrabold leading-tight">30 млн ₸</p>
+          <p class="mt-2 text-sm text-mute">срок 6 месяцев</p>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-ok/25 bg-gradient-to-br from-ok/10 to-panel p-6 flex flex-col justify-between card-hover">
+        <div><div class="mb-3 flex items-center gap-3"><span class="grid h-10 w-10 place-items-center rounded-xl bg-ok/15 text-ok">↗</span><p class="font-medium text-mute">Активность в базе</p></div>
+          <div class="grid grid-cols-3 gap-2"><div><p id="mVisits" class="text-2xl font-extrabold">—</p><p class="text-[11px] text-mute">визитов</p></div><div><p id="mEquipment" class="text-2xl font-extrabold">—</p><p class="text-[11px] text-mute">проверок</p></div><div><p id="mReports" class="text-2xl font-extrabold">—</p><p class="text-[11px] text-mute">отчётов</p></div></div>
+        </div>
+        <button type="button" onclick="showDashboardTab('activity')" class="mt-5 flex items-center justify-between rounded-xl border border-ok/25 bg-ok/5 px-3 py-2 text-sm font-semibold text-ok hover:bg-ok/10">Открыть журнал <span aria-hidden="true">→</span></button>
+      </div>
+    </section>
+
+    <!-- Динамика продаж и ИИ-рекомендации -->
+    <section data-dashboard-panel="analytics" class="hidden grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div class="lg:col-span-2 rounded-2xl border border-line bg-panel p-6">
+        <div class="flex items-baseline justify-between mb-4">
+          <h2 class="text-lg font-bold">Динамика продаж</h2>
+          <span id="chartUnit" class="text-xs text-mute"></span>
+        </div>
+        <div id="salesChart" class="flex gap-2 items-end" role="img" aria-label="Продажи по неделям"></div>
+      </div>
+      <div class="lg:col-span-3 rounded-2xl border border-line bg-panel p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div>
+            <h2 class="text-lg font-bold">ИИ-рекомендации руководителю</h2>
+            <p id="aiSource" class="text-xs text-mute mt-0.5"></p>
+          </div>
+          <button id="aiRefresh" type="button" class="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-raise transition">Обновить</button>
+        </div>
+        <div id="aiAdvice" class="text-[15px] leading-relaxed max-h-72 overflow-y-auto pr-1 text-mute">Загрузка…</div>
+      </div>
+    </section>
+
+    <!-- Таблица инцидентов -->
+    <section data-dashboard-panel="incidents" class="hidden rounded-2xl border border-line bg-panel overflow-hidden shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-5 border-b border-line">
+        <div>
+          <h2 class="text-lg font-bold">Аномалии, найденные ИИ</h2>
+          <p id="counter" class="text-sm text-mute"></p>
+        </div>
+        <select id="filter" class="rounded-lg bg-raise border border-line px-3 py-2 text-sm focus:border-accent transition" aria-label="Фильтр инцидентов">
+          <option value="all">Все инциденты</option>
+          <option value="high">Только критичные</option>
+          <option value="open">Только открытые</option>
+        </select>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-[15px]">
+          <thead class="text-mute text-sm bg-raise">
+            <tr>
+              <th class="px-6 py-3 font-medium">Сотрудник</th>
+              <th class="px-4 py-3 font-medium">Точка</th>
+              <th class="px-4 py-3 font-medium">Проблема</th>
+              <th class="px-4 py-3 font-medium">Вероятная причина (ИИ)</th>
+              <th class="px-4 py-3 font-medium">Статус</th>
+              <th class="px-6 py-3 font-medium text-right">Действие</th>
+            </tr>
+          </thead>
+          <tbody id="rows" class="divide-y divide-line"></tbody>
+        </table>
+      </div>
+    </section>
+    <section data-dashboard-panel="activity" class="hidden rounded-2xl border border-line bg-panel/90 overflow-hidden shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-5">
+        <div><h2 class="text-lg font-bold">Данные из базы</h2><p id="activityMeta" class="mt-1 text-sm text-mute">Загружаем журнал…</p></div>
+        <button id="activityRefresh" class="rounded-xl border border-line px-4 py-2 text-sm font-semibold hover:bg-raise">Обновить журнал</button>
+      </div>
+      <div id="activityList" class="grid gap-4 p-5 lg:grid-cols-3"></div>
+    </section>
+    <section data-dashboard-panel="tasks" class="hidden rounded-2xl border border-line bg-panel shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-5">
+        <div><h2 class="text-lg font-bold">Календарь задач команды</h2><p class="mt-1 text-sm text-mute">Задачи сотрудников и их выполнение</p></div>
+        <button id="managerTasksRefresh" class="rounded-xl border border-line px-4 py-2 text-sm font-semibold hover:bg-raise">Обновить</button>
+      </div>
+      <div id="managerTasksList" class="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-3"></div>
+    </section>
+    <section data-dashboard-panel="admin" class="hidden space-y-5">
+      <div class="rounded-3xl border border-accent/25 bg-gradient-to-br from-accent/15 via-panel to-panel p-6 sm:p-8 shadow-2xl">
+        <div class="flex flex-wrap items-start justify-between gap-4"><div><p class="text-xs font-bold uppercase tracking-[.2em] text-accent">Управление FieldControl</p><h2 class="mt-2 text-2xl font-extrabold">Администрирование демо</h2><p class="mt-2 max-w-2xl text-sm leading-relaxed text-mute">Жансая получает полный доступ к демонстрационным профилям, загрузке набора данных и просмотру состояния базы.</p></div><span class="rounded-full border border-ok/30 bg-ok/10 px-3 py-1.5 text-xs font-semibold text-ok">Полный доступ</span></div>
+        <div id="adminMeta" class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5"></div>
+      </div>
+      <div class="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+        <section class="overflow-hidden rounded-2xl border border-line bg-panel shadow-xl">
+          <div class="border-b border-line px-5 py-4"><h3 class="font-bold">Демо-аккаунты</h3><p class="mt-1 text-xs text-mute">Изменения ролей сохраняются в браузере этого устройства.</p></div>
+          <div id="adminUserList" class="divide-y divide-line"></div>
+        </section>
+        <section class="rounded-2xl border border-line bg-panel p-5 shadow-xl">
+          <h3 class="font-bold">Демо-данные</h3><p class="mt-2 text-sm leading-relaxed text-mute">Данные общие для демо-аккаунтов и сохраняются в SQLite. Дополнительный набор можно загрузить без удаления записей.</p>
+          <button id="loadDemoData" class="mt-5 w-full rounded-xl bg-accent px-4 py-3 text-sm font-bold text-bg shadow-lg shadow-accent/20 transition hover:brightness-110">Загрузить демо-данные</button>
+          <button id="resetDemoData" class="mt-2 w-full rounded-xl border border-alert/40 px-4 py-3 text-sm font-semibold text-alert transition hover:bg-alert/10">Сбросить демо-сценарий</button>
+          <p class="mt-3 text-xs leading-relaxed text-mute">Сброс заменит текущие операции демонстрационным набором.</p>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <!-- ---------- Кабинет агента ---------- -->
+  <main id="view-agent" class="hidden max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-8">
+    <div class="mb-5">
+      <h1 class="text-2xl font-bold">Рабочий день</h1>
+      <p class="text-mute text-sm mt-1" id="todayA"></p>
+      <div class="mt-4 max-w-md">
+        <div class="flex justify-between text-sm mb-1.5"><span class="text-mute">Визиты за день</span><span id="progressText" class="font-semibold">0 из 4</span></div>
+        <div class="h-2 rounded-full bg-raise overflow-hidden"><div id="progressBar" class="h-full bg-accent rounded-full transition-all duration-500" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <nav class="mt-6 grid grid-cols-4 gap-2 rounded-2xl border border-line/80 bg-panel/75 p-2 shadow-xl backdrop-blur" aria-label="Разделы рабочего дня">
+      <button data-tab="visits" class="agent-tab rounded-xl border border-transparent px-2 py-3 text-sm font-semibold text-mute transition" aria-selected="true">Маршрут</button>
+      <button data-tab="tasks" class="agent-tab rounded-xl border border-transparent px-2 py-3 text-sm font-semibold text-mute transition" aria-selected="false">Задачи</button>
+      <button data-tab="report" class="agent-tab rounded-xl border border-transparent px-2 py-3 text-sm font-semibold text-mute transition" aria-selected="false">Фото и QR</button>
+      <button data-tab="chat" class="agent-tab rounded-xl border border-transparent px-2 py-3 text-sm font-semibold text-mute transition" aria-selected="false">ИИ-помощник</button>
+    </nav>
+
+    <div class="mx-auto mt-5 max-w-3xl space-y-5">
+      <!-- Точки -->
+      <section id="tab-visits" class="agentSec space-y-3">
+        <h2 class="font-bold text-lg flex items-center gap-2">
+          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+          Маршрут на сегодня
+        </h2>
+        <form id="routeForm" class="grid gap-2 rounded-2xl border border-line bg-panel p-4 sm:grid-cols-[1fr_1fr_auto_auto]">
+          <input id="routeName" required maxlength="120" placeholder="Название новой точки" class="min-w-0 rounded-xl border border-line bg-bg px-3 py-2.5 text-sm">
+          <input id="routeAddress" maxlength="240" placeholder="Адрес (необязательно)" class="min-w-0 rounded-xl border border-line bg-bg px-3 py-2.5 text-sm">
+          <input id="routeTime" type="time" aria-label="Время визита" class="rounded-xl border border-line bg-bg px-3 py-2.5 text-sm">
+          <button class="rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-bg hover:brightness-110">Добавить точку</button>
+        </form>
+        <div id="storeList" class="space-y-3"></div>
+      </section>
+
+      <section id="tab-tasks" class="agentSec hidden space-y-4">
+        <div><h2 class="font-bold text-lg">Календарь задач</h2><p class="mt-1 text-sm text-mute">Добавляйте рабочие задачи и отмечайте выполнение — руководитель увидит статус.</p></div>
+        <form id="taskForm" class="grid gap-2 rounded-2xl border border-line bg-panel p-4">
+          <input id="taskTitle" required maxlength="160" placeholder="Что нужно сделать?" class="rounded-xl border border-line bg-bg px-3 py-2.5 text-sm">
+          <textarea id="taskDescription" maxlength="1200" rows="2" placeholder="Комментарий (необязательно)" class="rounded-xl border border-line bg-bg px-3 py-2.5 text-sm"></textarea>
+          <div class="flex flex-wrap items-center justify-between gap-2"><label class="text-sm text-mute">Срок <input id="taskDueDate" type="date" required class="ml-2 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-txt"></label><button class="rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-bg hover:brightness-110">Добавить задачу</button></div>
+        </form>
+        <div id="agentTasksList" class="space-y-3"></div>
+      </section>
+
+      <!-- Отчёт -->
+      <section id="tab-report" class="agentSec hidden space-y-4">
+        <h2 class="font-bold text-lg">Отчёт по точке</h2>
+        <p id="reportStore" class="text-sm text-mute">Сначала начните визит — отчёт привяжется к точке.</p>
+
+        <div class="rounded-2xl border border-line bg-panel p-4 card-hover">
+          <h3 class="font-semibold flex items-center gap-2">
+            <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h2.25a2 2 0 011.414.586l.414.414A2 2 0 009.879 8H11a2 2 0 012 2v6a2 2 0 01-2 2h-2.25a2 2 0 01-1.414-.586l-.414-.414A2 2 0 006.121 16H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11a4 4 0 118 0 4 4 0 01-8 0z"/></svg>
+            Фото морозильника
+          </h3>
+          <p class="text-sm text-mute mt-1">Фото сохранится в отчёте. ИИ опишет выкладку, если подключён анализ изображений.</p>
+          <label class="mt-3 flex items-center justify-center gap-2 w-full rounded-xl bg-accent text-bg font-semibold py-3 cursor-pointer hover:brightness-110 transition shadow-lg shadow-accent/20">
+            Загрузить фото
+            <input id="photoInput" type="file" accept="image/*" capture="environment" class="hidden">
+          </label>
+          <div id="photoResult" class="hidden mt-3"></div>
+        </div>
+
+        <div class="rounded-2xl border border-line bg-panel p-4 card-hover">
+          <h3 class="font-semibold flex items-center gap-2">
+            <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.274A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+            QR-код морозильника
+          </h3>
+          <p class="text-sm text-mute mt-1">Подтверждает, что ларь компании стоит на точке.</p>
+          <div id="scanBox" class="hidden relative mt-3 h-40 rounded-xl bg-bg border border-line overflow-hidden">
+            <div class="absolute inset-8 border-2 border-mute/60 rounded-lg"></div>
+            <div class="scanline absolute left-8 right-8 h-0.5 bg-accent shadow-[0_0_12px_3px_#5B8CFF]"></div>
+          </div>
+          <button id="qrBtn" class="mt-3 w-full rounded-xl border border-accent text-accent font-semibold py-3 hover:bg-accent/10 transition">Сканировать QR</button>
+          <button id="qrMissingBtn" class="mt-2 w-full rounded-xl border border-alert/60 text-alert font-semibold py-3 hover:bg-alert/10 transition">Морозильник не найден на точке</button>
+          <div id="qrResult" class="hidden mt-3"></div>
+        </div>
+      </section>
+
+      <!-- Чат -->
+      <section id="tab-chat" class="agentSec hidden flex-col rounded-2xl border border-line bg-panel p-5 shadow-xl" style="height: min(620px, calc(100vh - 300px)); min-height: 360px;">
+        <h2 class="font-bold text-lg mb-3 flex items-center gap-2">
+          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          ИИ-помощник
+        </h2>
+        <div id="chatLog" class="flex-1 overflow-y-auto space-y-3 pr-1" aria-live="polite"></div>
+        <div id="chips" class="flex gap-2 overflow-x-auto py-3"></div>
+        <form id="chatForm" class="flex gap-2">
+          <input id="chatInput" type="text" autocomplete="off" placeholder="Спросите, как выполнить план…" class="flex-1 rounded-xl bg-panel border border-line px-4 py-3 focus:border-accent transition">
+          <button class="rounded-xl bg-accent text-bg px-5 font-semibold hover:brightness-110 transition shadow-lg shadow-accent/20" aria-label="Отправить">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0-8.5-8.5M17 11l-4.5 4.5M12 11l4.5 4.5M9 11l-4.5 4.5"/></svg>
+          </button>
+        </form>
+      </section>
+    </div>
+
+  </main>
+</section>
+
+<div id="toast" class="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 hidden max-w-sm w-[92%] text-center rounded-xl bg-raise border border-line text-txt text-sm px-4 py-3 shadow-xl"></div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/static/js/api.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const ROLE_NAME = { agent: 'Торговый представитель', manager: 'Руководитель', owner: 'Владелец', admin: 'Администратор' };
+const dateStr = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+// Экранирование данных с сервера перед вставкой в HTML (имена могут вводить пользователи)
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function apiErr(e) { toast(e && e.message ? e.message : 'Ошибка связи с сервером'); }
+function toast(t) { const e = $('toast'); e.textContent = t; e.classList.remove('hidden'); clearTimeout(toast._t); toast._t = setTimeout(() => e.classList.add('hidden'), 3000); }
+
+/* ============ АВТОРИЗАЦИЯ (демо на localStorage) ============ */
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+const DEMO = [
+  { name: 'Иванов Алексей', email: 'agent@demo.kz', password: '1234', role: 'agent' },
+  { name: 'Петров Сергей', email: 'agent2@demo.kz', password: '1234', role: 'agent' },
+  { name: 'Ким Елена', email: 'agent3@demo.kz', password: '1234', role: 'agent' },
+  { name: 'Нурлан Сериков', email: 'manager@demo.kz', password: '1234', role: 'manager' },
+  { name: 'Айгерим Ахметова', email: 'manager2@demo.kz', password: '1234', role: 'manager' },
+  { name: 'Жансая Туремуратова', email: 'owner@demo.kz', password: '1234', role: 'admin' },
+  { name: 'Марат Омаров', email: 'owner2@demo.kz', password: '1234', role: 'owner' },
+];
+
+let users = load('mk_users', []);
+// Add built-in demo profiles and upgrade Zhansaya's existing demo entry to administrator.
+DEMO.forEach(d => {
+  const existing = users.find(u => u.email === d.email);
+  if (!existing) users.push(d);
+  else if (d.email === 'owner@demo.kz') Object.assign(existing, d); // обновляем демо-профиль Жансаи до администратора
+});
+save('mk_users', users);
+
+let role = location.pathname.startsWith('/dashboard') ? 'manager' : 'agent', mode = 'login', me = null;
+
+function paintAuth() {
+  document.querySelectorAll('.roleBtn').forEach(b => {
+    const on = b.dataset.role === role;
+    b.className = 'roleBtn text-left rounded-xl border p-4 transition ' + (on ? 'border-accent bg-accent/10' : 'border-line bg-panel hover:bg-raise');
+    b.setAttribute('aria-pressed', on);
+  });
+  document.querySelectorAll('.modeBtn').forEach(b => {
+    const on = b.dataset.mode === mode;
+    b.className = 'modeBtn pb-3 -mb-px border-b-2 ' + (on ? 'border-accent text-txt' : 'border-transparent text-mute');
+  });
+  $('nameRow').classList.toggle('hidden', mode !== 'register');
+  $('authTitle').textContent = mode === 'login' ? 'Вход в систему' : 'Создание аккаунта';
+  $('authSubmit').textContent = mode === 'login' ? 'Войти' : 'Зарегистрироваться';
+  $('authError').classList.add('hidden');
+}
+document.querySelectorAll('.roleBtn').forEach(b => b.onclick = () => { role = b.dataset.role; paintAuth(); });
+document.querySelectorAll('.modeBtn').forEach(b => b.onclick = () => { mode = b.dataset.mode; paintAuth(); });
+function authErr(t) { const e = $('authError'); e.textContent = t; e.classList.remove('hidden'); }
+
+$('authForm').onsubmit = (e) => {
+  e.preventDefault();
+  const name = $('fName').value.trim(), email = $('fEmail').value.trim().toLowerCase(), pass = $('fPass').value;
+  if (!/^\S+@\S+\.\S+$/.test(email)) return authErr('Введите корректную почту');
+  if (mode === 'register') {
+    if (name.length < 2) return authErr('Укажите имя и фамилию');
+    if (pass.length < 4) return authErr('Пароль должен быть не короче 4 символов');
+    if (users.some(u => u.email === email)) return authErr('Эта почта уже зарегистрирована — войдите');
+    const u = { name, email, password: pass, role };
+    users.push(u); save('mk_users', users); return enter(u);
+  }
+  const u = users.find(x => x.email === email && x.password === pass);
+  if (!u) return authErr('Неверная почта или пароль');
+  if (u.role !== role) return authErr('Этот аккаунт зарегистрирован как «' + ROLE_NAME[u.role] + '». Выберите эту роль.');
+  enter(u);
+};
+
+// Исправленные demo-кнопки: при клике автоматически заполняют форму и отправляют её
+$('demoList').innerHTML = DEMO.map(d => `
+  <button type="button" data-email="${d.email}" class="demoBtn w-full flex items-center justify-between gap-3 rounded-xl border border-line px-4 py-2.5 text-left hover:bg-panel transition card-hover">
+    <span class="min-w-0"><span class="block text-sm font-medium truncate">${d.name}</span><span class="block text-xs text-mute truncate">${d.email}</span></span>
+    <span class="text-xs font-semibold shrink-0 ${d.role === 'manager' ? 'text-amber' : d.role === 'owner' ? 'text-ok' : d.role === 'admin' ? 'text-alert' : 'text-accent'}">${ROLE_NAME[d.role]}</span>
+  </button>`).join('');
+
+document.querySelectorAll('.demoBtn').forEach(b => {
+  b.onclick = () => {
+    const d = DEMO.find(x => x.email === b.dataset.email);
+    if (!d) return;
+    role = d.role;
+    $('fEmail').value = d.email;
+    $('fPass').value = d.password;
+    mode = 'login';
+    paintAuth();
+    // Автоматическая отправка формы
+    $('authForm').dispatchEvent(new Event('submit'));
+  };
+});
+
+function enter(u) {
+  me = u; save('mk_session', u.email);
+  $('auth').classList.add('hidden'); $('app').classList.remove('hidden');
+  $('roleBadge').textContent = ROLE_NAME[u.role]; $('userName').textContent = u.name;
+  $('userAvatar').textContent = u.name.split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase();
+  $('switchView').classList.toggle('hidden', u.role === 'agent');
+  $('adminTab').classList.toggle('hidden', u.role !== 'admin');
+  $('todayM').textContent = $('todayA').textContent = dateStr;
+  showView(u.role === 'agent' ? 'agent' : 'manager');
+}
+function showView(v) {
+  $('view-manager').classList.toggle('hidden', v === 'agent');
+  $('view-agent').classList.toggle('hidden', v !== 'agent');
+  $('switchView').textContent = v === 'agent' ? 'Кабинет руководства' : 'Кабинет представителя';
+  $('switchView').dataset.view = v; window.scrollTo(0, 0);
+  if (v !== 'agent') {
+    const owner = me && me.role === 'owner';
+    $('managerTitle').textContent = me && me.role === 'admin' ? 'Панель администратора' : owner ? 'Панель владельца' : 'Центр управления';
+    showDashboardTab(owner ? 'overview' : 'overview');
+    startManagerPolling(); checkDatabase();
+  } else { stopManagerPolling(); checkDatabase(); loadStores(); }
+}
+$('switchView').onclick = () => showView($('switchView').dataset.view === 'agent' ? 'manager' : 'agent');
+$('logout').onclick = () => { save('mk_session', null); location.reload(); };
+
+/* ============ КАБИНЕТ РУКОВОДИТЕЛЯ (данные с сервера) ============ */
+let incidents = [], incidentsSig = '', stopPoll = null, dbStatusTimer = null;
+const LEVEL = { critical: 'high', high: 'high', medium: 'mid' };
+const badge = {
+  high: '<span class="inline-block rounded-full bg-alert/15 text-alert px-2.5 py-0.5 text-sm font-semibold">Критично</span>',
+  mid: '<span class="inline-block rounded-full bg-amber/15 text-amber px-2.5 py-0.5 text-sm font-semibold">Важно</span>'
+};
+function mapIncident(i) {
+  return { id: i.id, agent: i.agent || '—', store: i.point_name || i.point_id || '—', issue: i.title,
+           cause: i.description, level: LEVEL[i.severity] || 'mid', open: i.status === 'active' };
+}
+function renderRows() {
+  const f = $('filter').value;
+  const list = incidents.filter(i => f === 'all' || (f === 'high' && i.level === 'high') || (f === 'open' && i.open));
+  $('counter').textContent = 'Открыто: ' + incidents.filter(i => i.open).length + ' из ' + incidents.length;
+  $('rows').innerHTML = list.map(i => `
+    <tr class="transition-colors">
+      <td class="px-6 py-4 font-semibold">${esc(i.agent)}</td>
+      <td class="px-4 py-4">${esc(i.store)}</td>
+      <td class="px-4 py-4">${badge[i.level]}<div class="mt-1.5 font-medium">${esc(i.issue)}</div></td>
+      <td class="px-4 py-4 text-mute max-w-xs">${esc(i.cause)}</td>
+      <td class="px-4 py-4 font-medium ${i.open ? 'text-alert' : 'text-ok'}">${i.open ? 'Открыт' : 'Решён'}</td>
+      <td class="px-6 py-4 text-right">${i.open ? `<button data-id="${i.id}" class="assign rounded-lg border border-accent text-accent px-3.5 py-2 text-sm font-semibold hover:bg-accent/10 transition">Назначить задачу</button>` : '<span class="text-sm text-mute">Задача назначена</span>'}</td>
+    </tr>`).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-mute">Инцидентов по этому фильтру нет</td></tr>';
+  document.querySelectorAll('.assign').forEach(b => b.onclick = async () => {
+    const i = incidents.find(x => x.id === +b.dataset.id); b.disabled = true;
+    try { await MilkAPI.assignIncident(i.id); toast('Задача назначена: ' + i.agent); refreshIncidents(); }
+    catch (e) { apiErr(e); b.disabled = false; }
+  });
+}
+function applyIncidents(d) {
+  const sig = JSON.stringify(d.incidents) + JSON.stringify(d.stats);
+  if (sig !== incidentsSig) { incidentsSig = sig; incidents = d.incidents.map(mapIncident); renderRows(); }
+  $('mMissed').textContent = d.stats.missed_points;
+  $('mVisits').textContent = d.stats.visits_today;
+  $('mEquipment').textContent = d.stats.equipment_checks;
+  $('mReports').textContent = d.stats.photo_reports;
+}
+function refreshIncidents() { MilkAPI.getIncidents().then(applyIncidents).catch(() => {}); }
+function startManagerPolling() {            // живое обновление каждые 2,5 сек
+  if (stopPoll) return;
+  stopPoll = MilkAPI.poll(() => MilkAPI.getIncidents(), 2500, applyIncidents, () => {});
+  loadAnalytics(); loadAiAdvice(false); checkDatabase();
+  if (!dbStatusTimer) dbStatusTimer = setInterval(checkDatabase, 15000);
+}
+function stopManagerPolling() { if (stopPoll) { stopPoll(); stopPoll = null; } if (dbStatusTimer) { clearInterval(dbStatusTimer); dbStatusTimer = null; } }
+
+function renderChart(a) {
+  const max = Math.max(...a.fact, ...a.prev_period);
+  $('chartUnit').textContent = a.unit + ' · текущий / прошлый период';
+  $('salesChart').innerHTML = a.fact.map((v, i) => `
+    <div class="flex-1 min-w-0 text-center">
+      <div class="h-36 flex items-end justify-center gap-1">
+        <div class="w-1/2 rounded-t-lg ${i === a.fact.length - 1 ? 'bg-alert' : 'bg-accent/80'}" title="Текущий период: ${esc(v)}" style="height:${Math.round(v / max * 100)}%"></div>
+        <div class="w-1/2 rounded-t-lg bg-white/25" title="Прошлый период: ${esc(a.prev_period[i])}" style="height:${Math.round(a.prev_period[i] / max * 100)}%"></div>
+      </div>
+      <div class="text-xs text-mute mt-1.5">${esc(a.weeks[i])}</div>
+      <div class="text-[10px] font-semibold">${esc(v)} / ${esc(a.prev_period[i])}</div>
+    </div>`).join('');
+  $('mDropContext').textContent = `Последняя неделя: ${a.current_week} vs ${a.previous_week} тыс. ₸ · за 6 недель: ${a.period_drop_pct}% · демо-данные`;
+}
+async function loadAnalytics() {
+  try {
+    const a = (await MilkAPI.getAnalytics()).analytics;
+    $('mDrop').textContent = (a.drop_pct > 0 ? '+' : '−') + Math.abs(a.drop_pct) + '%';
+    renderChart(a);
+  } catch (e) { /* оставляем значения по умолчанию */ }
+}
+async function loadAiAdvice(refresh) {
+  $('aiAdvice').textContent = 'ИИ анализирует данные…';
+  try {
+    const r = await MilkAPI.getAiAnalytics(refresh);
+    $('aiAdvice').innerHTML = MilkAPI.formatText(r.text);
+    $('aiSource').textContent = r.source === 'rules' ? 'Режим правил (ИИ-провайдер не подключён)' : 'Сформировано ИИ · ' + r.source;
+  } catch (e) { $('aiAdvice').textContent = 'Не удалось получить рекомендации: ' + e.message; }
+}
+$('filter').onchange = renderRows;
+$('aiRefresh').onclick = () => loadAiAdvice(true);
+$('notifyAll').onclick = () => toast('Уведомление отправлено региональному менеджеру');
+
+function showDashboardTab(name) {
+  document.querySelectorAll('[data-dashboard-panel]').forEach(panel => panel.classList.toggle('hidden', panel.dataset.dashboardPanel !== name));
+  document.querySelectorAll('.dash-tab').forEach(tab => tab.setAttribute('aria-selected', tab.dataset.dashboardTab === name ? 'true' : 'false'));
+  if (name === 'activity') loadDashboardActivity();
+  if (name === 'tasks') loadManagerTasks();
+  if (name === 'admin') loadAdminCenter();
+}
+document.querySelectorAll('.dash-tab').forEach(tab => tab.onclick = () => showDashboardTab(tab.dataset.dashboardTab));
+const taskDateLabel = (value) => { const d = new Date(value + 'T00:00:00'); return Number.isNaN(d.valueOf()) ? value : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }); };
+async function loadManagerTasks() {
+  try {
+    const r = await MilkAPI.getTasks();
+    $('managerTasksList').innerHTML = r.tasks.map(t => `<article class="rounded-xl border ${t.status === 'done' ? 'border-ok/30' : 'border-line'} bg-bg/55 p-4"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="font-semibold">${esc(t.title)}</p><p class="mt-1 text-xs text-accent">${esc(t.agent_name)} · срок ${esc(taskDateLabel(t.due_date))}</p>${t.description ? `<p class="mt-2 text-sm text-mute">${esc(t.description)}</p>` : ''}</div><span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${t.status === 'done' ? 'bg-ok/10 text-ok' : 'bg-amber/10 text-amber'}">${t.status === 'done' ? 'Выполнена' : 'В работе'}</span></div>${t.completed_at ? `<p class="mt-2 text-xs text-mute">Выполнена: ${esc(t.completed_at)}</p>` : ''}</article>`).join('') || '<p class="py-8 text-center text-sm text-mute">Пока нет задач от сотрудников</p>';
+  } catch (e) { $('managerTasksList').innerHTML = `<p class="text-sm text-alert">Не удалось загрузить задачи: ${esc(e.message)}</p>`; }
+}
+$('managerTasksRefresh').onclick = loadManagerTasks;
+async function checkDatabase() {
+  const pill = $('dbStatus'); if (!pill) return;
+  try {
+    const h = await MilkAPI.getHealth();
+    const c = h.database.counts;
+    pill.innerHTML = `<i class="w-2 h-2 rounded-full bg-ok"></i><span>SQLite · визиты ${c.visits} · инциденты ${c.incidents}</span>`;
+    pill.title = 'База подключена. Данные сохраняются на сервере между перезапусками.';
+  } catch (e) {
+    pill.innerHTML = '<i class="w-2 h-2 rounded-full bg-alert"></i><span>Нет связи с базой</span>';
+    pill.title = e.message;
+  }
+}
+function activityCard(title, items, detail) {
+  return `<article class="rounded-2xl border border-line bg-bg/55 p-4"><div class="mb-3 flex items-center justify-between"><h3 class="font-semibold">${title}</h3><span class="rounded-full bg-accent/15 px-2.5 py-1 text-xs font-bold text-accent">${items.length}</span></div><div class="space-y-2">${items.slice(0,8).map(item => `<div class="rounded-xl border border-line/70 bg-panel/80 px-3 py-2.5"><div class="text-sm font-medium">${esc(detail(item))}</div><div class="mt-1 text-xs text-mute">${esc(item.timestamp || '—')}</div></div>`).join('') || '<p class="py-5 text-center text-sm text-mute">Пока нет сохранённых операций</p>'}</div></article>`;
+}
+async function loadDashboardActivity() {
+  $('activityMeta').textContent = 'Синхронизация с SQLite…';
+  try {
+    const [v,e,p] = await Promise.all([MilkAPI.getVisits(), MilkAPI.getEquipmentChecks(), MilkAPI.getPhotoReports()]);
+    $('activityList').innerHTML = activityCard('GPS-визиты',v.visits,x => `${x.agent_name} · ${x.point}`)+activityCard('Проверки оборудования',e.checks,x => `${x.point_id} · ${x.status === 'found' ? 'найдено' : 'не найдено'}`)+activityCard('Фотоотчёты',p.reports,x => `${x.agent_name || 'Представитель'} · ${x.point_id}`);
+    $('activityMeta').textContent = `Загружено с сервера: ${v.count} визитов, ${e.count} проверок, ${p.count} фотоотчётов`;
+    checkDatabase();
+  } catch (e) { $('activityMeta').textContent = 'Не удалось загрузить данные из базы: ' + e.message; }
+}
+$('activityRefresh').onclick = loadDashboardActivity;
+
+function renderAdminUsers() {
+  $('adminUserList').innerHTML = users.map(u => `<div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3"><div class="min-w-0"><p class="truncate text-sm font-semibold">${esc(u.name)}</p><p class="truncate text-xs text-mute">${esc(u.email)}</p></div><div class="flex items-center gap-2"><select data-role-email="${esc(u.email)}" class="rounded-lg border border-line bg-bg px-2.5 py-2 text-xs">${['agent','manager','owner','admin'].map(r => `<option value="${r}" ${u.role === r ? 'selected' : ''}>${ROLE_NAME[r]}</option>`).join('')}</select><button data-save-role="${esc(u.email)}" class="rounded-lg border border-accent/40 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/10" ${me && u.email === me.email ? 'disabled title="Свою роль нельзя изменить"' : ''}>Сохранить</button></div></div>`).join('');
+  document.querySelectorAll('[data-save-role]').forEach(button => button.onclick = () => {
+    const target = users.find(u => u.email === button.dataset.saveRole);
+    const select = document.querySelector(`[data-role-email="${CSS.escape(button.dataset.saveRole)}"]`);
+    if (!target || !select || target.email === me.email) return;
+    target.role = select.value; save('mk_users', users); renderAdminUsers();
+    toast('Роль для ' + target.name + ' обновлена');
+  });
+}
+async function loadAdminCenter() {
+  renderAdminUsers();
+  try {
+    const h = await MilkAPI.getHealth(), c = h.database.counts;
+    const cards = [['Аккаунты', users.length], ['Визиты', c.visits], ['QR-проверки', c.equipment_checks], ['Фотоотчёты', c.photo_reports], ['Инциденты', c.incidents]];
+    $('adminMeta').innerHTML = cards.map(([label,value]) => `<div class="rounded-xl border border-white/10 bg-bg/45 p-3"><p class="text-2xl font-extrabold">${esc(value)}</p><p class="mt-1 text-xs text-mute">${label}</p></div>`).join('');
+  } catch (e) { $('adminMeta').innerHTML = `<p class="text-sm text-alert">Не удалось получить состояние базы: ${esc(e.message)}</p>`; }
+}
+$('loadDemoData').onclick = async () => {
+  const button = $('loadDemoData'); button.disabled = true;
+  try { const result = await MilkAPI.seedDemoData(); toast(result.message); incidentsSig = ''; refreshIncidents(); await loadAdminCenter(); }
+  catch (e) { apiErr(e); }
+  finally { button.disabled = false; }
+};
+$('resetDemoData').onclick = async () => {
+  if (!confirm('Сбросить операции и вернуть демонстрационный сценарий?')) return;
+  try { await MilkAPI.reset(); incidentsSig = ''; refreshIncidents(); await loadAdminCenter(); toast('Демо-сценарий восстановлен'); }
+  catch (e) { apiErr(e); }
+};
+
+/* ============ КАБИНЕТ АГЕНТА ============ */
+let stores = [   // запасной список, если сервер недоступен; обычно приходит из /api/points
+  { id: 'POINT-001', name: 'Магазин №1 «Алма»', addr: 'ул. Байтурсынова, 12', time: '09:00', status: 'todo' },
+  { id: 'POINT-002', name: 'Магазин №2 «Сауле»', addr: 'пр. Аль-Фараби, 45', time: '10:30', status: 'todo' },
+  { id: 'POINT-003', name: 'Магазин №3 «Нур»', addr: 'ул. Абая, 78', time: '12:00', status: 'todo' },
+  { id: 'POINT-004', name: 'Минимаркет «Тулпар»', addr: 'мкр. Мирас, 5', time: '14:00', status: 'todo' },
+];
+let currentStore = null;
+function localTodayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+async function loadStores() {
+  const today = localTodayISO();
+  try {
+    const d = await MilkAPI.getRoutes(me.name, today);
+    stores = d.routes.map(p => ({ id: p.point_id, routeId: String(p.id), name: p.name, addr: p.address, time: p.planned_time, status: p.done ? 'done' : 'todo' }));
+  } catch (e) { /* остаёмся на встроенном списке */ }
+  try {
+    const v = await MilkAPI.getVisits();
+    v.visits.filter(x => me && x.agent_name === me.name && String(x.timestamp).slice(0, 10) === today).forEach(x => {
+      const s = stores.find(st => st.name === x.point);
+      if (s) { s.status = 'done'; s.coords = x.lat.toFixed(4) + ', ' + x.lng.toFixed(4); currentStore = s; }
+    });
+  } catch (e) { /* без восстановления */ }
+  if (currentStore) $('reportStore').textContent = 'Точка: ' + currentStore.name;
+  renderStores();
+}
+function renderStores() {
+  $('storeList').innerHTML = stores.map(s => {
+    const done = s.status === 'done', busy = s.status === 'checking';
+    return `<article class="rounded-2xl border bg-panel p-4 card-hover ${done ? 'border-ok/50' : 'border-line'}">
+      <div class="flex items-start justify-between gap-3"><div class="min-w-0"><h3 class="font-semibold leading-snug">${esc(s.name)}</h3><p class="text-sm text-mute mt-0.5">${esc(s.addr || 'Адрес не указан')}</p></div>
+        <div class="flex shrink-0 items-center gap-2"><span class="text-sm font-semibold text-accent">${esc(s.time || 'Без времени')}</span><button type="button" data-remove-route="${esc(s.routeId)}" aria-label="Убрать точку из маршрута" class="rounded-lg border border-alert/30 px-2 py-1 text-xs text-alert hover:bg-alert/10">Убрать</button></div>
+      </div>
+      ${done ? `<p class="mt-3 text-sm font-medium text-ok">✓ Визит выполнен${s.coords ? ' · ' + esc(s.coords) : ''}</p>`
+        : `<button data-id="${esc(s.id)}" class="startBtn mt-3 w-full rounded-xl bg-accent text-bg font-semibold py-2.5 hover:brightness-110 disabled:opacity-60 transition shadow-lg shadow-accent/20" ${busy ? 'disabled' : ''}>${busy ? 'Проверяем GPS…' : 'Начать визит'}</button>`}
+    </article>`;
+  }).join('') || '<p class="rounded-xl border border-dashed border-line p-5 text-center text-sm text-mute">Маршрут пуст. Добавьте точку на сегодня.</p>';
+  document.querySelectorAll('[data-remove-route]').forEach(b => b.onclick = async () => {
+    if (!confirm('Убрать эту точку из маршрута на сегодня?')) return;
+    try { await MilkAPI.deleteRoute(b.dataset.removeRoute, me.name, localTodayISO()); stores = stores.filter(s => s.routeId !== b.dataset.removeRoute); renderStores(); }
+    catch (e) { apiErr(e); }
+  });
+  const n = stores.filter(s => s.status === 'done').length;
+  $('progressText').textContent = n + ' из ' + stores.length;
+  $('progressBar').style.width = (stores.length ? n / stores.length * 100 : 0) + '%';
+  document.querySelectorAll('.startBtn').forEach(b => b.onclick = () => startVisit(b.dataset.id));
+}
+$('routeForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = $('routeName').value.trim();
+  if (!name) return;
+  try {
+    const r = await MilkAPI.addRoute(me.name, localTodayISO(), name, $('routeAddress').value.trim(), $('routeTime').value);
+    stores.push({ id: r.route.point_id, routeId: String(r.route.id), name: r.route.name, addr: r.route.address, time: r.route.planned_time, status: 'todo' });
+    e.target.reset(); renderStores(); toast('Точка добавлена в маршрут');
+  } catch (err) { apiErr(err); }
+});
+
+function renderTaskCard(t) {
+  const done = t.status === 'done';
+  return `<article class="rounded-2xl border ${done ? 'border-ok/30' : 'border-line'} bg-panel p-4"><div class="flex items-start gap-3"><button type="button" data-task-toggle="${t.id}" data-task-status="${done ? 'open' : 'done'}" class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border ${done ? 'border-ok bg-ok text-bg' : 'border-line text-transparent'}" aria-label="${done ? 'Вернуть в работу' : 'Отметить выполненной'}">✓</button><div class="min-w-0 flex-1"><div class="flex flex-wrap items-center justify-between gap-2"><h3 class="font-semibold ${done ? 'text-mute line-through' : ''}">${esc(t.title)}</h3><span class="text-xs ${done ? 'text-ok' : 'text-amber'}">${done ? 'Выполнена' : 'До ' + esc(taskDateLabel(t.due_date))}</span></div>${t.description ? `<p class="mt-1 text-sm text-mute">${esc(t.description)}</p>` : ''}</div></div></article>`;
+}
+async function loadAgentTasks() {
+  try {
+    const r = await MilkAPI.getTasks(me.name);
+    $('agentTasksList').innerHTML = r.tasks.map(renderTaskCard).join('') || '<p class="rounded-xl border border-dashed border-line p-5 text-center text-sm text-mute">Задач пока нет. Добавьте первую.</p>';
+    document.querySelectorAll('[data-task-toggle]').forEach(b => b.onclick = async () => {
+      try { await MilkAPI.updateTask(b.dataset.taskToggle, me.name, b.dataset.taskStatus); await loadAgentTasks(); }
+      catch (err) { apiErr(err); }
+    });
+  } catch (err) { $('agentTasksList').innerHTML = `<p class="text-sm text-alert">Не удалось загрузить задачи: ${esc(err.message)}</p>`; }
+}
+$('taskDueDate').value = localTodayISO();
+$('taskForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await MilkAPI.addTask(me.name, $('taskTitle').value.trim(), $('taskDescription').value.trim(), $('taskDueDate').value);
+    $('taskTitle').value = ''; $('taskDescription').value = ''; await loadAgentTasks(); toast('Задача добавлена в календарь');
+  } catch (err) { apiErr(err); }
+});
+async function finishCheckin(s, coords, note) {
+  s.status = 'done'; s.coords = coords; currentStore = s;
+  $('reportStore').textContent = 'Точка: ' + s.name; renderStores(); toast(note);
+}
+async function startVisit(id) {
+  const s = stores.find(x => x.id === id); if (!s || s.status !== 'todo') return;
+  s.status = 'checking'; renderStores();
+  try {   // GPS берётся в MilkAPI.startVisit; без доступа к GPS подставляются демо-координаты
+    const r = await MilkAPI.startVisit(me.name, s.name), p = r.position;
+    finishCheckin(s, p.lat.toFixed(4) + ', ' + p.lng.toFixed(4),
+      p.fallback ? 'GPS недоступен — визит отмечен в demo-режиме' : 'Визит начат: местоположение подтверждено');
+  } catch (e) { s.status = 'todo'; renderStores(); apiErr(e); }
+}
+function needStore() { if (currentStore) return false; toast('Сначала начните визит в списке точек'); return true; }
+
+$('photoInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  if (needStore()) { e.target.value = ''; return; }
+  const box = $('photoResult'); box.classList.remove('hidden');
+  box.innerHTML = '<p class="text-sm text-mute">Загружаем фото и проверяем возможность анализа…</p>';
+  const url = URL.createObjectURL(file);
+  try {
+    const r = await MilkAPI.sendPhotoReport(currentStore.id, file, me.name);
+    const resultText = r.analysis_available
+      ? `<p class="mt-1 text-sm text-mute"><b class="text-txt">Анализ фото:</b> ${esc(r.analysis)}</p>`
+      : '<p class="mt-1 text-sm text-amber">Фото сохранено. Анализ изображений сейчас недоступен — проверьте подключение ИИ.</p>';
+    box.innerHTML = `<div class="flex gap-3 items-start"><img src="${url}" alt="Загруженное фото морозильника" class="w-20 h-20 rounded-xl object-cover border border-line">
+      <div class="min-w-0"><p class="font-semibold text-ok">Фотоотчёт отправлен</p>
+        <p class="text-sm text-mute">${r.incident_closed ? 'Инцидент по этой точке закрыт. ' : ''}</p>${resultText}
+      </div></div>`;
+    toast('Фотоотчёт отправлен руководителю');
+  } catch (err) {
+    URL.revokeObjectURL(url);
+    box.innerHTML = '<p class="text-sm text-alert">Не удалось отправить фото: ' + esc(err.message) + '</p>'; apiErr(err);
+  }
+  e.target.value = '';
+});
+let qrScanner = null;
+async function handleQrScan(decodedText) {
+  const scanned = String(decodedText || '').trim();
+  const match = scanned.match(/POINT-[A-Z0-9-]+/i);
+  const scannedId = match ? match[0].toUpperCase() : scanned;
+  if (scannedId !== String(currentStore.id).toUpperCase()) {
+    $('qrResult').classList.remove('hidden');
+    $('qrResult').innerHTML = '<p class="font-semibold text-alert">QR-код не совпадает с текущей точкой</p><p class="text-sm text-mute">Считан код: ' + esc(scannedId) + '</p>';
+    toast('Проверьте QR-код морозильника');
+    return;
+  }
+  try {
+    await MilkAPI.verifyEquipment(currentStore.id, 'found', me.name);
+    $('qrResult').classList.remove('hidden');
+    $('qrResult').innerHTML = '<p class="font-semibold text-ok">QR распознан · морозильник подтверждён</p><p class="text-sm text-mute">Точка: ' + esc(currentStore.name) + '</p>';
+    toast('QR-код распознан, проверка сохранена');
+  } catch (err) { apiErr(err); }
+}
+$('qrBtn').onclick = async () => {
+  if (needStore()) return;
+  $('scanBox').classList.remove('hidden'); $('qrResult').classList.add('hidden');
+  $('qrBtn').disabled = true; $('qrBtn').textContent = 'Запрашиваем камеру…';
+  try {
+    if (!window.Html5Qrcode) throw new Error('Не удалось загрузить модуль сканирования. Проверьте интернет и обновите страницу.');
+    qrScanner = new Html5Qrcode('scanBox');
+    await qrScanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 160 } }, async (text) => {
+      try { await qrScanner.stop(); } catch (_) {}
+      qrScanner.clear(); qrScanner = null; $('scanBox').classList.add('hidden');
+      $('qrBtn').disabled = false; $('qrBtn').textContent = 'Сканировать QR ещё раз';
+      await handleQrScan(text);
+    });
+    $('qrBtn').textContent = 'Наведите камеру на QR';
+  } catch (err) {
+    if (qrScanner) { try { await qrScanner.stop(); qrScanner.clear(); } catch (_) {} qrScanner = null; }
+    $('scanBox').classList.add('hidden'); $('qrBtn').disabled = false; $('qrBtn').textContent = 'Повторить сканирование';
+    $('qrResult').classList.remove('hidden');
+    $('qrResult').innerHTML = '<p class="text-sm text-alert">' + esc(err.message || 'Не удалось открыть камеру. Разрешите доступ и откройте сайт по HTTPS или localhost.') + '</p>';
+  }
+};
+$('qrMissingBtn').onclick = async () => {
+  if (needStore()) return;
+  try {
+    await MilkAPI.verifyEquipment(currentStore.id, 'missing', me.name);
+    $('qrResult').classList.remove('hidden');
+    $('qrResult').innerHTML = '<p class="font-semibold text-alert">Морозильник не найден на точке</p><p class="text-sm text-mute">Руководитель уведомлён: создан критический инцидент.</p>';
+    toast('Критический инцидент отправлен руководителю');
+  } catch (e) { apiErr(e); }
+};
+
+// Чат с ИИ: POST /api/chat {message, history} -> {reply}
+const chatHistory = [];
+function addMsg(text, mine, rich) {
+  const el = document.createElement('div');
+  el.className = 'msg flex ' + (mine ? 'justify-end' : 'justify-start');
+  el.innerHTML = `<div class="max-w-[85%] px-4 py-2.5 text-[15px] leading-snug ${mine ? 'bg-accent text-bg rounded-2xl rounded-br-md shadow-lg shadow-accent/20' : 'bg-raise border border-line rounded-2xl rounded-bl-md'}"></div>`;
+  if (rich) el.firstChild.innerHTML = MilkAPI.formatText(text);   // formatText экранирует HTML и поддерживает **жирный**
+  else el.firstChild.textContent = text;
+  $('chatLog').appendChild(el); $('chatLog').scrollTop = 1e6; return el;
+}
+async function askAI(text) {
+  try {
+    const r = await MilkAPI.chat(text, chatHistory.slice(-8));
+    chatHistory.push({ role: 'user', content: text }, { role: 'assistant', content: r.reply });
+    return r.reply;
+  } catch (e) { return 'Не удалось связаться с сервером: ' + e.message; }
+}
+async function send(text) {
+  text = text.trim(); if (!text) return; addMsg(text, true);
+  const typing = addMsg('Печатает…', false); const reply = await askAI(text);
+  typing.remove(); addMsg(reply, false, true);
+}
+$('chatForm').onsubmit = (e) => { e.preventDefault(); const v = $('chatInput').value; $('chatInput').value = ''; send(v); };
+$('chips').innerHTML = ['Как выполнить план?', 'Почему упали продажи?', 'Что предложить магазину?', 'Как проверить морозильник?']
+  .map(c => `<button type="button" class="chip shrink-0 rounded-full border border-line bg-panel px-3.5 py-2 text-sm hover:bg-raise transition flex items-center gap-2"><svg class="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>${c}</button>`).join('');
+document.querySelectorAll('.chip').forEach(b => b.onclick = () => send(b.textContent));
+addMsg('Здравствуйте! Ваш план выполнен на 50%. Могу подсказать, как его закрыть.', false);
+
+// Разделы рабочего дня — по одной панели на всех размерах экрана.
+function showTab(name) {
+  if (name === 'tasks') loadAgentTasks();
+  document.querySelectorAll('.agentSec').forEach(s => {
+    const on = s.id === 'tab-' + name;
+    s.classList.remove('hidden');
+    s.style.display = on ? (name === 'chat' ? 'flex' : 'block') : 'none';
+  });
+  document.querySelectorAll('.agent-tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false'));
+}
+document.querySelectorAll('.agent-tab').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+renderStores(); showTab('visits'); paintAuth();
+
+// Автовход, если сессия сохранена
+const sess = load('mk_session', null); const su = sess && users.find(u => u.email === sess); if (su) enter(su);
+</script>
+</body>
+</html>

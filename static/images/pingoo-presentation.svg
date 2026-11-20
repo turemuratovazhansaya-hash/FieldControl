@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" shape-rendering="crispEdges" role="img" aria-label="Пиксельный пингвин Пинго">
+  <g fill="#172844">
+    <path d="M176 128h32V96h128v32h32v64h32v64h-32v112h-32v48H176v-32h-32V224h32z"/>
+    <path d="M128 240h48v112h-48z" fill="#273c60"/>
+  </g>
+  <path fill="#f1f6fa" d="M208 144h96v16h16v48h-16v16h-96v-16h-16v-48h16zM208 272h96v16h16v80h-16v16h-96v-16h-16v-80h16z"/>
+  <path fill="#101b2e" d="M208 96h128v32H208z"/>
+  <path fill="#12203a" d="M224 176h16v24h-16zM272 176h16v24h-16z"/>
+  <path fill="#f2a445" d="M240 208h32v16h-16v16h-16v-16h-16v-16z"/>
+  <path fill="#45c7af" d="M160 240h32v16h128v-16h32v48h-32v16H192v-16h-32z"/>
+  <path fill="#38a994" d="M288 288h32v16h-16v64h-32v-16h-16v-48h32z"/>
+  <path fill="#f1a447" d="M192 400h48v16h-16v16h-64v-16h32zM272 400h48v16h32v16h-64v-16h-16z"/>
+</svg>
